@@ -1,6 +1,5 @@
 use deno_core::JsRuntime;
-use shared::Message;
-use std::io::Read;
+use shared::{ipc::IpcChild, Message};
 
 fn execute_code(code: &str) -> String {
     let mut rt = JsRuntime::new(Default::default());
@@ -12,10 +11,10 @@ fn execute_code(code: &str) -> String {
 }
 
 fn main() {
-    let mut buffer = Vec::new();
-    std::io::stdin().read_to_end(&mut buffer).ok().unwrap();
+    let mut ipc = IpcChild::new(std::io::stdin(), std::io::stderr());
 
-    let message = serde_json::from_slice::<Message>(&buffer).unwrap();
+    let raw_message = ipc.read().unwrap();
+    let message = serde_json::from_str(raw_message.as_str()).unwrap();
 
     match message {
         Message::ExecuteCode { code } => {
