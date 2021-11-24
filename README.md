@@ -1,2 +1,3 @@
-# Gluing deno to byond 🙈
+# Gluing v8 to byond 🙈
+
 Just a PoC
