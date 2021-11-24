@@ -1,59 +1,72 @@
 use std::{
-    io::{Read, Result, Stderr, Stdin, Stdout, Write},
-    process::Child,
+  io::{Read, Result, Stderr, Stdin, Write},
+  process::Child,
 };
 
 pub struct IpcParent {
-    child: Child,
+  child: Child,
 }
 
 impl IpcParent {
-    pub fn new(child: Child) -> Self {
-        Self { child }
-    }
+  pub fn new(child: Child) -> Self {
+    Self { child }
+  }
 
-    pub fn read(&mut self) -> Result<String> {
-        let mut stderr = self.child.stderr.take().unwrap();
-        let mut buffer = Vec::new();
+  pub fn read(&mut self) -> Result<String> {
+    let mut stderr = self
+      .child
+      .stderr
+      .take()
+      .unwrap();
 
-        stderr.read_to_end(&mut buffer)?;
-        let buffer = String::from_utf8(buffer).unwrap();
+    let mut buffer = Vec::new();
 
-        Ok(buffer)
-    }
+    stderr.read_to_end(&mut buffer)?;
+    let buffer = String::from_utf8(buffer).unwrap();
 
-    pub fn write(&mut self, message: &str) -> Result<()> {
-        let mut stdin = self.child.stdin.take().unwrap();
+    Ok(buffer)
+  }
 
-        stdin.write_all(message.as_bytes())?;
-        stdin.flush()
-    }
+  pub fn write(&mut self, message: &str) -> Result<()> {
+    let mut stdin = self
+      .child
+      .stdin
+      .take()
+      .unwrap();
+
+    stdin.write_all(message.as_bytes())?;
+    stdin.flush()
+  }
 }
 
 impl Drop for IpcParent {
-    fn drop(&mut self) {
-        self.child.wait().unwrap();
-    }
+  fn drop(&mut self) {
+    self.child.wait().unwrap();
+  }
 }
 
 pub struct IpcChild {
-    stdin: Stdin,
-    stderr: Stderr,
+  stdin: Stdin,
+  stderr: Stderr,
 }
 
 impl IpcChild {
-    pub fn new(stdin: Stdin, stderr: Stderr) -> Self {
-        Self { stdin, stderr }
-    }
+  pub fn new(stdin: Stdin, stderr: Stderr) -> Self {
+    Self { stdin, stderr }
+  }
 
-    pub fn read(&mut self) -> Result<String> {
-        let mut buffer = String::new();
-        self.stdin.read_to_string(&mut buffer)?;
+  pub fn read(&mut self) -> Result<String> {
+    let mut buffer = String::new();
+    self
+      .stdin
+      .read_to_string(&mut buffer)?;
 
-        Ok(buffer)
-    }
+    Ok(buffer)
+  }
 
-    pub fn write(&mut self, message: &str) -> Result<()> {
-        self.stderr.write_all(message.as_bytes())
-    }
+  pub fn write(&mut self, message: &str) -> Result<()> {
+    self
+      .stderr
+      .write_all(message.as_bytes())
+  }
 }
