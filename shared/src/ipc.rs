@@ -1,72 +1,101 @@
-use std::{
-  io::{Read, Result, Stderr, Stdin, Write},
-  process::Child,
+//! 🤯
+
+use ipc_channel::ipc::{
+  self, IpcOneShotServer, IpcReceiver, IpcSender,
 };
+use serde::{Deserialize, Serialize};
 
-pub struct IpcParent {
-  child: Child,
+pub struct IpcClient {
+  rx: IpcReceiver<IpcMessage>,
+  tx: IpcSender<IpcMessage>,
 }
 
-impl IpcParent {
-  pub fn new(child: Child) -> Self {
-    Self { child }
-  }
+impl IpcClient {
+  pub fn new(server_name: &str) -> Self {
+    let tx =
+      IpcSender::connect(server_name.to_string()).unwrap();
 
-  pub fn read(&mut self) -> Result<String> {
-    let mut stderr = self
-      .child
-      .stderr
-      .take()
+    let (server_tx, rx) = ipc::channel().unwrap();
+
+    tx.send(IpcMessage::Sender(server_tx))
       .unwrap();
 
-    let mut buffer = Vec::new();
+    let (new_tx, server_rx) = ipc::channel().unwrap();
 
-    stderr.read_to_end(&mut buffer)?;
-    let buffer = String::from_utf8(buffer).unwrap();
-
-    Ok(buffer)
-  }
-
-  pub fn write(&mut self, message: &str) -> Result<()> {
-    let mut stdin = self
-      .child
-      .stdin
-      .take()
+    tx.send(IpcMessage::Receiver(server_rx))
       .unwrap();
 
-    stdin.write_all(message.as_bytes())?;
-    stdin.flush()
+    Self { rx, tx: new_tx }
+  }
+
+  pub fn receiver(&self) -> &IpcReceiver<IpcMessage> {
+    &self.rx
+  }
+
+  pub fn sender(&self) -> &IpcSender<IpcMessage> {
+    &self.tx
   }
 }
 
-impl Drop for IpcParent {
-  fn drop(&mut self) {
-    self.child.wait().unwrap();
+pub struct IpcServer {
+  rx: IpcReceiver<IpcMessage>,
+  tx: IpcSender<IpcMessage>,
+}
+
+impl IpcServer {
+  pub fn receiver(&self) -> &IpcReceiver<IpcMessage> {
+    &self.rx
+  }
+
+  pub fn sender(&self) -> &IpcSender<IpcMessage> {
+    &self.tx
   }
 }
 
-pub struct IpcChild {
-  stdin: Stdin,
-  stderr: Stderr,
+pub struct IpcServerNaked {
+  name: String,
+  server: IpcOneShotServer<IpcMessage>,
 }
 
-impl IpcChild {
-  pub fn new(stdin: Stdin, stderr: Stderr) -> Self {
-    Self { stdin, stderr }
+impl IpcServerNaked {
+  pub fn new() -> Self {
+    let (server, name) = IpcOneShotServer::new().unwrap();
+
+    Self { name, server }
   }
 
-  pub fn read(&mut self) -> Result<String> {
-    let mut buffer = String::new();
-    self
-      .stdin
-      .read_to_string(&mut buffer)?;
+  pub fn wait_connection(self) -> IpcServer {
+    let (rx, tx_message) = self.server.accept().unwrap();
 
-    Ok(buffer)
+    let tx = match tx_message {
+      IpcMessage::Sender(tx) => tx,
+      _ => panic!("Expected message with IpcSender"),
+    };
+
+    let rx = match rx.recv().unwrap() {
+      IpcMessage::Receiver(rx) => rx,
+      _ => panic!("Expected message with IpcReceiver"),
+    };
+
+    IpcServer { rx, tx }
   }
 
-  pub fn write(&mut self, message: &str) -> Result<()> {
-    self
-      .stderr
-      .write_all(message.as_bytes())
+  pub fn name(&self) -> String {
+    self.name.clone()
   }
+}
+
+impl Default for IpcServerNaked {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum IpcMessage {
+  Sender(IpcSender<IpcMessage>),
+  Receiver(IpcReceiver<IpcMessage>),
+  ExecuteCode(String),
+  CodeExecutionResult(String),
+  Exit,
 }

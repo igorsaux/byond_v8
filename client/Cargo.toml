@@ -6,10 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
 byond = "0.4.0"
+ipc-channel = "0.15.0"
+lazy_static = "1.4.0"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.71"
 shared = { path = "../shared" }

@@ -1,5 +1,5 @@
 use deno_core::{JsRuntime, RuntimeOptions};
-use shared::{ipc::IpcChild, Message};
+use shared::ipc::{IpcClient, IpcMessage};
 
 fn execute_code(code: &str) -> String {
   let mut rt = JsRuntime::new(RuntimeOptions::default());
@@ -15,16 +15,31 @@ fn execute_code(code: &str) -> String {
 }
 
 fn main() {
-  let mut ipc =
-    IpcChild::new(std::io::stdin(), std::io::stderr());
+  let args = std::env::args().collect::<Vec<String>>();
+  let server_name = args
+    .get(1)
+    .expect("Pass the server name in args.");
 
-  let raw_message = ipc.read().unwrap();
-  let message =
-    serde_json::from_str(raw_message.as_str()).unwrap();
+  let ipc = IpcClient::new(server_name);
 
-  match message {
-    Message::ExecuteCode { code } => {
-      eprintln!("{}", execute_code(&code));
+  loop {
+    let message = ipc.receiver().try_recv().ok();
+
+    if message.is_none() {
+      continue;
+    }
+
+    let message = message.unwrap();
+
+    match message {
+      IpcMessage::ExecuteCode(code) => ipc
+        .sender()
+        .send(IpcMessage::CodeExecutionResult(
+          execute_code(&code),
+        ))
+        .unwrap(),
+      IpcMessage::Exit => return,
+      _ => continue,
     }
   }
 }

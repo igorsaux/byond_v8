@@ -1,19 +1,26 @@
-use byond::byond;
-use shared::{ipc::IpcParent, Message};
+#[macro_use]
+extern crate lazy_static;
 
-byond!(execute_js: code; {
-    let server = std::process::Command::new("server.exe")
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .unwrap();
+mod ffi;
+pub mod internal;
+pub mod message;
+pub mod worker;
 
-    let mut ipc = IpcParent::new(server);
-    let message = Message::ExecuteCode {
-        code: String::from(code)
-    };
+#[cfg(test)]
+mod tests {
+  use crate::internal;
 
-    ipc.write(serde_json::to_string(&message).unwrap().as_str()).unwrap();
-    ipc.read().unwrap()
-});
+  #[test]
+  fn execute_js() {
+    internal::start_v8("server.exe");
+
+    let result = internal::execute_js("2 + 2");
+    assert_eq!(result, "4");
+    let result = internal::execute_js(
+      r#"let a = [1, 2, 3]; a.map(i => i * 2)"#,
+    );
+    assert_eq!(result, "2,4,6");
+
+    internal::stop_v8();
+  }
+}
