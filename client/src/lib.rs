@@ -19,7 +19,7 @@ mod tests {
     let result = internal::execute_js(
       r#"let a = [1, 2, 3]; a.map(i => i * 2)"#,
     );
-    assert_eq!(result, "2,4,6");
+    assert_eq!(result, "[2,4,6]");
 
     internal::stop_v8();
   }

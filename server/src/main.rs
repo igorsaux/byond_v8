@@ -1,17 +1,27 @@
-use deno_core::{JsRuntime, RuntimeOptions};
+use deno_core::v8;
+use runtime::{ByondRuntime, Runtime};
 use shared::ipc::{IpcClient, IpcMessage};
 
-fn execute_code(code: &str) -> String {
-  let mut rt = JsRuntime::new(RuntimeOptions::default());
-  let value = rt
-    .execute_script("vm", code)
-    .unwrap();
-  let value = value.open(rt.v8_isolate());
+mod runtime;
 
-  let result =
-    value.to_rust_string_lossy(&mut rt.handle_scope());
+fn execute_code(
+  rt: &mut impl Runtime,
+  code: &str,
+) -> String {
+  let rt = rt.runtime_mut();
+  let value = rt.execute_script("<anon>", code);
 
-  result
+  match value {
+    Ok(global) => {
+      let scope = &mut rt.handle_scope();
+      let local = v8::Local::new(scope, global);
+
+      serde_v8::from_v8::<serde_json::Value>(scope, local)
+        .unwrap()
+        .to_string()
+    }
+    Err(error) => error.to_string(),
+  }
 }
 
 fn main() {
@@ -21,6 +31,7 @@ fn main() {
     .expect("Pass the server name in args.");
 
   let ipc = IpcClient::new(server_name);
+  let mut rt = ByondRuntime::new();
 
   loop {
     let message = ipc.receiver().try_recv().ok();
@@ -35,7 +46,7 @@ fn main() {
       IpcMessage::ExecuteCode(code) => ipc
         .sender()
         .send(IpcMessage::CodeExecutionResult(
-          execute_code(&code),
+          execute_code(&mut rt, &code),
         ))
         .unwrap(),
       IpcMessage::Exit => return,
