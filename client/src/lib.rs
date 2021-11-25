@@ -23,4 +23,20 @@ mod tests {
 
     internal::stop_v8();
   }
+
+  #[test]
+  fn execute_infinite_loop() {
+    internal::start_v8("server.exe");
+
+    let result =
+      internal::execute_js(r#"while (true) {}; 1"#);
+    assert_eq!(
+      result,
+      "Uncaught Error: execution terminated"
+    );
+    let result = internal::execute_js("2 + 2");
+    assert_eq!(result, "4");
+
+    internal::stop_v8();
+  }
 }

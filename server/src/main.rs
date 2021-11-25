@@ -1,15 +1,21 @@
-use deno_core::v8;
+use std::time::Duration;
+
+use code_executor::execute_with_timeout;
+use deno_core::{error::JsError, v8};
 use runtime::{ByondRuntime, Runtime};
 use shared::ipc::{IpcClient, IpcMessage};
 
+mod code_executor;
 mod runtime;
 
-fn execute_code(
+async fn execute_code(
   rt: &mut impl Runtime,
   code: &str,
 ) -> String {
   let rt = rt.runtime_mut();
-  let value = rt.execute_script("<anon>", code);
+  let value =
+    execute_with_timeout(rt, code, Duration::from_secs(2))
+      .await;
 
   match value {
     Ok(global) => {
@@ -24,7 +30,8 @@ fn execute_code(
   }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
   let args = std::env::args().collect::<Vec<String>>();
   let server_name = args
     .get(1)
@@ -46,7 +53,7 @@ fn main() {
       IpcMessage::ExecuteCode(code) => ipc
         .sender()
         .send(IpcMessage::CodeExecutionResult(
-          execute_code(&mut rt, &code),
+          execute_code(&mut rt, &code).await,
         ))
         .unwrap(),
       IpcMessage::Exit => return,
