@@ -10,9 +10,23 @@ pub mod worker;
 mod tests {
   use crate::internal;
 
+  const fn get_server_path() -> &'static str {
+    // Lol linux users be like:
+    #[cfg(unix)]
+    return "../target/debug/server";
+
+    #[cfg(windows)]
+    return "server.exe";
+
+    #[cfg(not(windows))]
+    #[cfg(not(unix))]
+    compile_error!("Only unix or windows supported.");
+  }
+
   #[test]
   fn execute_js() {
-    internal::start_v8("server.exe");
+    let path = get_server_path();
+    internal::start_v8(path);
 
     let result = internal::execute_js("2 + 2");
     assert_eq!(result, "4");
@@ -26,7 +40,7 @@ mod tests {
 
   #[test]
   fn execute_infinite_loop() {
-    internal::start_v8("server.exe");
+    internal::start_v8(get_server_path());
 
     let result =
       internal::execute_js(r#"while (true) {}; 1"#);
