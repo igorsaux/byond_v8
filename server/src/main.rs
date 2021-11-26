@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use code_executor::execute_with_timeout;
-use deno_core::{error::JsError, v8};
+use deno_core::v8;
 use runtime::{ByondRuntime, Runtime};
 use shared::ipc::{IpcClient, IpcMessage};
 
