@@ -36,6 +36,12 @@ impl ByondRuntime {
   }
 }
 
+impl Default for ByondRuntime {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Runtime for ByondRuntime {
   fn runtime(&self) -> &JsRuntime {
     &self.rt

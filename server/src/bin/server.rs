@@ -1,34 +1,8 @@
-use std::time::Duration;
-
-use code_executor::execute_with_timeout;
-use deno_core::v8;
-use runtime::{ByondRuntime, Runtime};
 use shared::ipc::{IpcClient, IpcMessage};
 
-mod code_executor;
-mod runtime;
+extern crate server;
 
-async fn execute_code(
-  rt: &mut impl Runtime,
-  code: &str,
-) -> String {
-  let rt = rt.runtime_mut();
-  let value =
-    execute_with_timeout(rt, code, Duration::from_secs(2))
-      .await;
-
-  match value {
-    Ok(global) => {
-      let scope = &mut rt.handle_scope();
-      let local = v8::Local::new(scope, global);
-
-      serde_v8::from_v8::<serde_json::Value>(scope, local)
-        .unwrap()
-        .to_string()
-    }
-    Err(error) => error.to_string(),
-  }
-}
+use server::{execute_code, runtime::ByondRuntime};
 
 #[tokio::main]
 async fn main() {
