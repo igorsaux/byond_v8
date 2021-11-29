@@ -63,7 +63,14 @@ impl ClientWorker {
       let worker_message = worker_message.unwrap();
 
       match worker_message {
-        WorkerMessage::Exit => return,
+        WorkerMessage::Exit => {
+          ipc
+            .sender()
+            .send(IpcMessage::Exit)
+            .unwrap();
+
+          return;
+        }
         WorkerMessage::ExecuteCode(code) => {
           let message = IpcMessage::ExecuteCode(code);
 
