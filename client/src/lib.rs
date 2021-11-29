@@ -1,7 +1,4 @@
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
 extern crate auxtools;
 
 use auxtools::Value as ByondValue;

@@ -102,7 +102,6 @@ dependencies = [
  "auxtools",
  "byond",
  "ipc-channel",
- "lazy_static",
  "serde",
  "serde_json",
  "shared",
