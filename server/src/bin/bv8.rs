@@ -1,8 +1,5 @@
-use shared::ipc::{IpcClient, IpcMessage};
-
-extern crate server;
-
 use server::{execute_code, runtime::ByondRuntime};
+use shared::ipc::{IpcClient, IpcMessage};
 
 #[tokio::main]
 async fn main() {

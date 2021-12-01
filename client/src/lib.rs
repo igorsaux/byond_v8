@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate auxtools;
-
-use auxtools::Value as ByondValue;
+use auxtools::{hook, Value as ByondValue};
 use shared::SERVER_NAME;
 
 pub mod internal;
