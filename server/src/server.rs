@@ -90,9 +90,8 @@ impl Server {
     &mut self,
     notification: IpcNotification,
   ) {
-    match notification {
-      IpcNotification::Exit => self.on_exit().await,
-      _ => (),
+    if let IpcNotification::Exit = notification {
+      self.on_exit().await
     }
   }
 
