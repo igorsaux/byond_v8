@@ -1,3 +1,4 @@
+pub mod server;
 pub mod runtime;
 
 use deno_core::v8;
