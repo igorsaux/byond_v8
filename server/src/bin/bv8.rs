@@ -1,8 +1,12 @@
 use server::{execute_code, runtime::ByondRuntime};
-use shared::ipc::{IpcClient, IpcMessage};
+use shared::ipc::{
+  IpcClient, IpcMessage, IpcNotification, IpcRequest,
+};
 
 #[tokio::main]
 async fn main() {
+  use IpcMessage::*;
+
   let args = std::env::args().collect::<Vec<String>>();
   let server_name = args
     .get(1)
@@ -21,14 +25,18 @@ async fn main() {
     let message = message.unwrap();
 
     match message {
-      IpcMessage::ExecuteCode(code) => ipc
-        .sender()
-        .send(IpcMessage::CodeExecutionResult(
-          execute_code(&mut rt, &code).await,
-        ))
-        .unwrap(),
-      IpcMessage::Exit => return,
-      _ => continue,
-    }
+      Request(r) => match r {
+        IpcRequest::ExecuteCode(code) => ipc
+          .sender()
+          .send(Notification(
+            IpcNotification::CodeExecutionResult(
+              execute_code(&mut rt, &code).await,
+            ),
+          ))
+          .unwrap(),
+        IpcRequest::Exit => return,
+      },
+      _ => {}
+    };
   }
 }

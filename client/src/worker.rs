@@ -4,7 +4,9 @@ use std::{
   thread,
 };
 
-use shared::ipc::{IpcMessage, IpcServerNaked};
+use shared::ipc::{
+  IpcMessage, IpcNotification, IpcRequest, IpcServerNaked,
+};
 
 use crate::message::WorkerMessage;
 
@@ -44,6 +46,8 @@ impl ClientWorker {
   }
 
   fn main(self, server_path: String) {
+    use IpcMessage::*;
+
     let ipc = IpcServerNaked::new();
 
     let _ = Command::new(server_path)
@@ -66,13 +70,14 @@ impl ClientWorker {
         WorkerMessage::Exit => {
           ipc
             .sender()
-            .send(IpcMessage::Exit)
+            .send(Request(IpcRequest::Exit))
             .unwrap();
 
           return;
         }
         WorkerMessage::ExecuteCode(code) => {
-          let message = IpcMessage::ExecuteCode(code);
+          let message =
+            Request(IpcRequest::ExecuteCode(code));
 
           ipc
             .sender()
@@ -81,8 +86,9 @@ impl ClientWorker {
 
           let result = ipc.receiver().recv().unwrap();
 
-          if let IpcMessage::CodeExecutionResult(result) =
-            result
+          if let Notification(
+            IpcNotification::CodeExecutionResult(result),
+          ) = result
           {
             self
               .tx
