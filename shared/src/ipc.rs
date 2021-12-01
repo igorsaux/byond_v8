@@ -108,7 +108,6 @@ impl Default for IpcServerNaked {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum IpcRequest {
   ExecuteCode(String),
-  Exit,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -116,6 +115,7 @@ pub enum IpcNotification {
   CodeExecutionResult(String),
   IpcSender(IpcSender<IpcMessage>),
   IpcReceiver(IpcReceiver<IpcMessage>),
+  Exit,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

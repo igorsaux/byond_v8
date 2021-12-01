@@ -2,8 +2,6 @@ use auxtools::{hook, Value as ByondValue};
 use shared::SERVER_NAME;
 
 pub mod internal;
-pub mod message;
-pub mod worker;
 
 #[hook("/proc/_start_v8")]
 fn start_v8() {

@@ -34,9 +34,11 @@ async fn main() {
             ),
           ))
           .unwrap(),
-        IpcRequest::Exit => return,
       },
-      _ => {}
+      Notification(n) => match n {
+        IpcNotification::Exit => return,
+        _ => {}
+      },
     };
   }
 }
