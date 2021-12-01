@@ -1,6 +1,5 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::collections::HashMap;
 
-use deno_core::v8::IsolateHandle;
 use ipc_channel::ipc::TryRecvError;
 use shared::ipc::{
   IpcClient, IpcMessage::*, IpcNotification, IpcRequest,
@@ -10,11 +9,7 @@ use uuid::Uuid;
 
 use crate::runtime::{ByondRuntime, Runtime};
 
-thread_local! {
-  static ISOLATES: RefCell<HashMap<Uuid, IsolateHandle>> = RefCell::new(HashMap::new());
-}
-
-type ReqeustResult = Result<(), ipc_channel::Error>;
+type RequestResult = Result<(), ipc_channel::Error>;
 
 pub struct Server {
   ipc: IpcClient,
@@ -29,10 +24,20 @@ impl Server {
     Self { ipc, isolates }
   }
 
+  fn send_notification(
+    &mut self,
+    notification: IpcNotification,
+  ) -> RequestResult {
+    self
+      .ipc
+      .sender()
+      .send(Notification(notification))
+  }
+
   async fn handle_request(
     &mut self,
     request: IpcRequest,
-  ) -> ReqeustResult {
+  ) -> RequestResult {
     match request {
       IpcRequest::ExecuteCode { code, isolate } => {
         self
@@ -52,38 +57,35 @@ impl Server {
     &mut self,
     code: &str,
     isolate: &str,
-  ) -> ReqeustResult {
-    let Self { ipc, isolates } = self;
+  ) -> RequestResult {
     let isolate_uuid = Uuid::parse_str(isolate).unwrap();
-    let isolate = isolates
+
+    let isolate = self
+      .isolates
       .get_mut(&isolate_uuid)
       .unwrap()
       .as_mut();
 
     let result = crate::execute_code(isolate, code).await;
 
-    ipc
-      .sender()
-      .send(Notification(
-        IpcNotification::CodeExecutionResult(result),
-      ))
+    self.send_notification(
+      IpcNotification::CodeExecutionResult(result),
+    )
   }
 
   // TODO: Match RuntimeType.
   async fn on_create_isolate(
     &mut self,
     _ty: RuntimeType,
-  ) -> ReqeustResult {
-    let Self { ipc, isolates } = self;
+  ) -> RequestResult {
     let isolate_uuid = Uuid::new_v4();
-    isolates
+    self
+      .isolates
       .insert(isolate_uuid, Box::new(ByondRuntime::new()));
 
-    ipc
-      .sender()
-      .send(Notification(IpcNotification::IsolateCreated(
-        isolate_uuid.to_string(),
-      )))
+    self.send_notification(IpcNotification::IsolateCreated(
+      isolate_uuid.to_string(),
+    ))
   }
 
   async fn handle_notification(
