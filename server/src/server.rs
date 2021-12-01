@@ -1,3 +1,4 @@
+use ipc_channel::ipc::TryRecvError;
 use shared::ipc::{
   IpcClient, IpcMessage::*, IpcNotification, IpcRequest,
 };
@@ -69,13 +70,16 @@ impl Server {
         .ipc
         .receiver()
         .try_recv()
+        .map_err(|e| match e {
+          TryRecvError::IpcError(e) => panic!("{:?}", e),
+          _ => e,
+        })
         .ok();
 
-      if message.is_none() {
-        continue;
-      }
-
-      let message = message.unwrap();
+      let message = match message {
+        None => continue,
+        Some(m) => m,
+      };
 
       match message {
         Request(request) => self
