@@ -1,5 +1,5 @@
-pub mod server;
 pub mod runtime;
+pub mod server;
 
 use deno_core::v8;
 use tokio::time::{Duration, Instant};
@@ -48,7 +48,7 @@ async fn execute_with_timeout(
 }
 
 pub async fn execute_code(
-  rt: &mut impl Runtime,
+  rt: &mut dyn Runtime,
   code: &str,
 ) -> String {
   let rt = rt.runtime_mut();

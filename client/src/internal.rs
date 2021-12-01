@@ -2,7 +2,7 @@ use std::{cell::RefCell, process::Command};
 
 use shared::ipc::{
   IpcMessage::*, IpcNotification, IpcRequest, IpcServer,
-  IpcServerNaked,
+  IpcServerNaked, RuntimeType,
 };
 
 thread_local! {
@@ -49,7 +49,7 @@ pub fn stop_v8() {
   });
 }
 
-pub fn execute_js(code: &str) -> String {
+pub fn execute_js(code: &str, isolate: &str) -> String {
   SERVER.with(|worker| {
     let worker = worker.borrow();
 
@@ -57,8 +57,10 @@ pub fn execute_js(code: &str) -> String {
       panic!("Run V8 first.")
     }
 
-    let message =
-      Request(IpcRequest::ExecuteCode(code.to_string()));
+    let message = Request(IpcRequest::ExecuteCode {
+      code: code.to_string(),
+      isolate: isolate.to_string(),
+    });
     let channel = worker.as_ref().unwrap();
     channel
       .sender()
@@ -78,5 +80,39 @@ pub fn execute_js(code: &str) -> String {
     }
 
     String::new()
+  })
+}
+
+pub fn craete_isolate() -> String {
+  SERVER.with(|worker| {
+    let worker = worker.borrow();
+
+    if worker.is_none() {
+      panic!("Run V8 first.")
+    }
+
+    let message = Request(IpcRequest::CreateIsolate(
+      RuntimeType::Byond,
+    ));
+    let channel = worker.as_ref().unwrap();
+
+    channel
+      .sender()
+      .send(message)
+      .unwrap();
+
+    let response = channel
+      .receiver()
+      .recv()
+      .unwrap();
+
+    if let Notification(IpcNotification::IsolateCreated(
+      uuid,
+    )) = response
+    {
+      return uuid;
+    }
+
+    panic!("Can't create isolate.");
   })
 }

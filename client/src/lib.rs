@@ -1,6 +1,8 @@
 use auxtools::{hook, Value as ByondValue};
+use byond_message::ByondMessage;
 use shared::SERVER_NAME;
 
+mod byond_message;
 pub mod internal;
 
 #[hook("/proc/_start_v8")]
@@ -17,13 +19,27 @@ fn stop_v8() {
   Ok(ByondValue::null())
 }
 
-#[hook("/proc/_execute_js")]
-fn execute_js(code: Value) {
+#[hook("/proc/_execute_code")]
+fn execute_js(code: Value, isolate: Value) {
   let code = code.to_string().unwrap();
+  let isolate = isolate.to_string().unwrap();
   // 🤔
   let code = code.trim_matches('"');
+  let isolate = isolate.trim_matches('"');
 
-  let result = internal::execute_js(code);
+  let result = internal::execute_js(code, isolate);
+
+  Ok(ByondValue::from_string(result).unwrap())
+}
+
+#[hook("/proc/_create_isolate")]
+fn create_isolate() {
+  let uuid = internal::craete_isolate();
+  let result =
+    serde_json::to_string(&ByondMessage::NewIsolate {
+      uuid,
+    })
+    .unwrap();
 
   Ok(ByondValue::from_string(result).unwrap())
 }
@@ -39,12 +55,14 @@ mod tests {
   #[test]
   fn execute_js() {
     internal::start_v8(SERVER_PATH);
+    let isolate = internal::craete_isolate();
 
-    let result = internal::execute_js("2 + 2");
+    let result = internal::execute_js("2 + 2", &isolate);
     assert_eq!(result, "4");
     thread::sleep(Duration::from_secs(4));
     let result = internal::execute_js(
       r#"let a = [1, 2, 3]; a.map(i => i * 2)"#,
+      &isolate,
     );
     assert_eq!(result, "[2,4,6]");
 
@@ -54,14 +72,17 @@ mod tests {
   #[test]
   fn execute_infinite_loop() {
     internal::start_v8(SERVER_PATH);
+    let isolate = internal::craete_isolate();
 
-    let result =
-      internal::execute_js(r#"while (true) {}; 1"#);
+    let result = internal::execute_js(
+      r#"while (true) {}; 1"#,
+      &isolate,
+    );
     assert_eq!(
       result,
       "Uncaught Error: execution terminated"
     );
-    let result = internal::execute_js("2 + 2");
+    let result = internal::execute_js("2 + 2", &isolate);
     assert_eq!(result, "4");
 
     internal::stop_v8();

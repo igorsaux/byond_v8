@@ -106,8 +106,14 @@ impl Default for IpcServerNaked {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum RuntimeType {
+  Byond,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub enum IpcRequest {
-  ExecuteCode(String),
+  ExecuteCode { code: String, isolate: String },
+  CreateIsolate(RuntimeType),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -115,7 +121,9 @@ pub enum IpcNotification {
   CodeExecutionResult(String),
   IpcSender(IpcSender<IpcMessage>),
   IpcReceiver(IpcReceiver<IpcMessage>),
+  IsolateCreated(String),
   Exit,
+  Error { request: String, message: String },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

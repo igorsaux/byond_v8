@@ -956,6 +956,7 @@ dependencies = [
  "serde_v8",
  "shared",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
