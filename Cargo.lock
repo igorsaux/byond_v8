@@ -26,7 +26,7 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 [[package]]
 name = "auxtools"
 version = "0.1.0"
-source = "git+https://github.com/willox/auxtools?branch=master#a4b08d61e14e5e7f392e40063abbe7487fd50ec7"
+source = "git+https://github.com/igorsaux/auxtools?branch=bv8#53a7d59ae1c4ad3e996866cd56936a059d286707"
 dependencies = [
  "auxtools-impl",
  "cc",
@@ -42,7 +42,7 @@ dependencies = [
 [[package]]
 name = "auxtools-impl"
 version = "0.1.0"
-source = "git+https://github.com/willox/auxtools?branch=master#a4b08d61e14e5e7f392e40063abbe7487fd50ec7"
+source = "git+https://github.com/igorsaux/auxtools?branch=bv8#53a7d59ae1c4ad3e996866cd56936a059d286707"
 dependencies = [
  "hex",
  "proc-macro2",
