@@ -13,7 +13,7 @@ type RequestResult = Result<(), ipc_channel::Error>;
 
 pub struct Server {
   ipc: IpcClient,
-  isolates: HashMap<Uuid, Box<dyn Runtime>>,
+  isolates: HashMap<String, Box<dyn Runtime>>,
 }
 
 impl Server {
@@ -58,11 +58,9 @@ impl Server {
     code: &str,
     isolate: &str,
   ) -> RequestResult {
-    let isolate_uuid = Uuid::parse_str(isolate).unwrap();
-
     let isolate = self
       .isolates
-      .get_mut(&isolate_uuid)
+      .get_mut(isolate)
       .unwrap()
       .as_mut();
 
@@ -78,13 +76,14 @@ impl Server {
     &mut self,
     _ty: RuntimeType,
   ) -> RequestResult {
-    let isolate_uuid = Uuid::new_v4();
-    self
-      .isolates
-      .insert(isolate_uuid, Box::new(ByondRuntime::new()));
+    let isolate_uuid = Uuid::new_v4().to_string();
+    self.isolates.insert(
+      isolate_uuid.clone(),
+      Box::new(ByondRuntime::new()),
+    );
 
     self.send_notification(IpcNotification::IsolateCreated(
-      isolate_uuid.to_string(),
+      isolate_uuid,
     ))
   }
 
