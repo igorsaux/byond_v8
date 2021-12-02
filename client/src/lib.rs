@@ -60,18 +60,15 @@ fn create_isolate() {
 fn delete_isolate(isolate: ByondValue) {
   let isolate = match isolate.to_string() {
     Ok(isolate) => isolate,
-    Err(_) => return Err(runtime!("`isolate` must be a string."))
+    Err(_) => {
+      return Err(runtime!("`isolate` must be a string."))
+    }
   };
 
   let isolate = isolate.trim_matches('"');
 
   internal::delete_isolate(isolate);
 
-  Ok(ByondValue::null())
-}
-
-#[hook("/proc/_get_isolates")]
-fn get_isolates() {
   Ok(ByondValue::null())
 }
 
