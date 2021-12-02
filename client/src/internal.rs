@@ -22,8 +22,8 @@ pub fn spawn_server(server_path: &str) -> IpcServer {
 }
 
 pub fn start_v8(path: &str) {
-  SERVER.with(|worker| {
-    let mut worker = worker.borrow_mut();
+  SERVER.with(|server| {
+    let mut worker = server.borrow_mut();
 
     if worker.is_some() {
       panic!("V8 is running.");
@@ -35,42 +35,37 @@ pub fn start_v8(path: &str) {
 }
 
 pub fn stop_v8() {
-  SERVER.with(|worker| {
-    let mut worker = worker.borrow_mut();
+  SERVER.with(|server| {
+    let mut worker = server.borrow_mut();
 
     if worker.is_none() {
       panic!("V8 is not running.");
     }
 
     let server = worker.take().unwrap();
-    let tx = server.sender();
-    tx.send(Notification(IpcNotification::Exit))
+    server
+      .send_notification(IpcNotification::Exit)
       .unwrap();
   });
 }
 
 pub fn execute_js(code: &str, isolate: &str) -> String {
-  SERVER.with(|worker| {
-    let worker = worker.borrow();
+  SERVER.with(|server| {
+    let worker = server.borrow();
 
     if worker.is_none() {
       panic!("Run V8 first.")
     }
 
-    let message = Request(IpcRequest::ExecuteCode {
-      code: code.to_string(),
-      isolate: isolate.to_string(),
-    });
-    let channel = worker.as_ref().unwrap();
-    channel
-      .sender()
-      .send(message)
+    let server = worker.as_ref().unwrap();
+    server
+      .send_reqeust(IpcRequest::ExecuteCode {
+        code: code.to_string(),
+        isolate: isolate.to_string(),
+      })
       .unwrap();
 
-    let response = channel
-      .receiver()
-      .recv()
-      .unwrap();
+    let response = server.recv().unwrap();
 
     if let Notification(
       IpcNotification::CodeExecutionResult(result),
@@ -83,28 +78,23 @@ pub fn execute_js(code: &str, isolate: &str) -> String {
   })
 }
 
-pub fn craete_isolate() -> String {
-  SERVER.with(|worker| {
-    let worker = worker.borrow();
+pub fn create_isolate() -> String {
+  SERVER.with(|server| {
+    let worker = server.borrow();
 
     if worker.is_none() {
       panic!("Run V8 first.")
     }
 
-    let message = Request(IpcRequest::CreateIsolate(
-      RuntimeType::Byond,
-    ));
-    let channel = worker.as_ref().unwrap();
+    let server = worker.as_ref().unwrap();
 
-    channel
-      .sender()
-      .send(message)
+    server
+      .send_reqeust(IpcRequest::CreateIsolate(
+        RuntimeType::Byond,
+      ))
       .unwrap();
 
-    let response = channel
-      .receiver()
-      .recv()
-      .unwrap();
+    let response = server.recv().unwrap();
 
     if let Notification(IpcNotification::IsolateCreated(
       uuid,
@@ -114,5 +104,50 @@ pub fn craete_isolate() -> String {
     }
 
     panic!("Can't create isolate.");
+  })
+}
+
+pub fn delete_isolate(isolate: &str) {
+  SERVER.with(|server| {
+    let server = server.borrow_mut();
+
+    if server.is_none() {
+      panic!("Run V8 first.");
+    }
+
+    let server = server.as_ref().unwrap();
+
+    server
+      .send_reqeust(IpcRequest::DeleteIsolate {
+        isolate: isolate.to_string(),
+      })
+      .unwrap();
+  })
+}
+
+pub fn get_isolates() -> Vec<String> {
+  SERVER.with(|server| {
+    let server = server.borrow_mut();
+
+    if server.is_none() {
+      panic!("Run V8 first.");
+    }
+
+    let server = server.as_ref().unwrap();
+
+    server
+      .send_reqeust(IpcRequest::GetIsolates)
+      .unwrap();
+
+    let response = server.recv().unwrap();
+
+    if let Notification(IpcNotification::ListOfIsolates(
+      isolates,
+    )) = response
+    {
+      return isolates;
+    }
+
+    Vec::new()
   })
 }

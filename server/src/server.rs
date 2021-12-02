@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 use ipc_channel::ipc::TryRecvError;
 use shared::ipc::{
@@ -25,7 +25,7 @@ impl Server {
   }
 
   fn send_notification(
-    &mut self,
+    &self,
     notification: IpcNotification,
   ) -> RequestResult {
     self
@@ -45,10 +45,12 @@ impl Server {
           .await
       }
       IpcRequest::CreateIsolate(ty) => {
-        self
-          .on_create_isolate(ty)
-          .await
+        self.on_create_isolate(ty)
       }
+      IpcRequest::DeleteIsolate { isolate } => {
+        self.on_delete_isolate(&isolate)
+      }
+      IpcRequest::GetIsolates => self.on_get_isolates(),
     }
   }
 
@@ -72,7 +74,7 @@ impl Server {
   }
 
   // TODO: Match RuntimeType.
-  async fn on_create_isolate(
+  fn on_create_isolate(
     &mut self,
     _ty: RuntimeType,
   ) -> RequestResult {
@@ -84,6 +86,32 @@ impl Server {
 
     self.send_notification(IpcNotification::IsolateCreated(
       isolate_uuid,
+    ))
+  }
+
+  fn on_delete_isolate(
+    &mut self,
+    isolate: &str,
+  ) -> RequestResult {
+    if let Entry::Occupied(entry) = self
+      .isolates
+      .entry(isolate.to_string())
+    {
+      entry.remove();
+    }
+
+    Ok(())
+  }
+
+  fn on_get_isolates(&self) -> RequestResult {
+    let isolates: Vec<String> = self
+      .isolates
+      .keys()
+      .cloned()
+      .collect();
+
+    self.send_notification(IpcNotification::ListOfIsolates(
+      isolates,
     ))
   }
 

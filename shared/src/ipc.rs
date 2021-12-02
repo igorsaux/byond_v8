@@ -1,7 +1,11 @@
 //! 🤯
 
-use ipc_channel::ipc::{
-  self, IpcOneShotServer, IpcReceiver, IpcSender,
+use ipc_channel::{
+  ipc::{
+    self, IpcError, IpcOneShotServer, IpcReceiver,
+    IpcSender,
+  },
+  Error,
 };
 use serde::{Deserialize, Serialize};
 
@@ -55,6 +59,28 @@ impl IpcServer {
 
   pub fn sender(&self) -> &IpcSender<IpcMessage> {
     &self.tx
+  }
+
+  pub fn send_reqeust(
+    &self,
+    request: IpcRequest,
+  ) -> Result<(), Error> {
+    self
+      .tx
+      .send(IpcMessage::Request(request))
+  }
+
+  pub fn send_notification(
+    &self,
+    notification: IpcNotification,
+  ) -> Result<(), Error> {
+    self
+      .tx
+      .send(IpcMessage::Notification(notification))
+  }
+
+  pub fn recv(&self) -> Result<IpcMessage, IpcError> {
+    self.rx.recv()
   }
 }
 
@@ -114,6 +140,8 @@ pub enum RuntimeType {
 pub enum IpcRequest {
   ExecuteCode { code: String, isolate: String },
   CreateIsolate(RuntimeType),
+  DeleteIsolate { isolate: String },
+  GetIsolates,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -122,6 +150,7 @@ pub enum IpcNotification {
   IpcSender(IpcSender<IpcMessage>),
   IpcReceiver(IpcReceiver<IpcMessage>),
   IsolateCreated(String),
+  ListOfIsolates(Vec<String>),
   Exit,
   Error { request: String, message: String },
 }

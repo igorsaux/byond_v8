@@ -34,7 +34,7 @@ fn execute_js(code: Value, isolate: Value) {
 
 #[hook("/proc/_create_isolate")]
 fn create_isolate() {
-  let uuid = internal::craete_isolate();
+  let uuid = internal::create_isolate();
   let result =
     serde_json::to_string(&ByondMessage::NewIsolate {
       uuid,
@@ -42,6 +42,21 @@ fn create_isolate() {
     .unwrap();
 
   Ok(ByondValue::from_string(result).unwrap())
+}
+
+#[hook("/proc/_delete_isolate")]
+fn delete_isolate(isolate: Value) {
+  let isolate = isolate.to_string().unwrap();
+  let isolate = isolate.trim_matches('"');
+
+  internal::delete_isolate(isolate);
+
+  Ok(ByondValue::null())
+}
+
+#[hook("/proc/_get_isolates")]
+fn get_isolates() {
+  Ok(ByondValue::null())
 }
 
 #[cfg(test)]
@@ -55,7 +70,7 @@ mod tests {
   #[test]
   fn execute_js() {
     internal::start_v8(SERVER_PATH);
-    let isolate = internal::craete_isolate();
+    let isolate = internal::create_isolate();
 
     let result = internal::execute_js("2 + 2", &isolate);
     assert_eq!(result, "4");
@@ -72,7 +87,7 @@ mod tests {
   #[test]
   fn execute_infinite_loop() {
     internal::start_v8(SERVER_PATH);
-    let isolate = internal::craete_isolate();
+    let isolate = internal::create_isolate();
 
     let result = internal::execute_js(
       r#"while (true) {}; 1"#,
@@ -84,6 +99,34 @@ mod tests {
     );
     let result = internal::execute_js("2 + 2", &isolate);
     assert_eq!(result, "4");
+
+    internal::stop_v8();
+  }
+
+  #[test]
+  fn get_isolates() {
+    internal::start_v8(SERVER_PATH);
+
+    assert_eq!(internal::get_isolates().len(), 0);
+
+    let isolate = internal::create_isolate();
+    let total_isolates = internal::get_isolates();
+
+    assert_eq!(total_isolates.len(), 1);
+    assert_eq!(total_isolates[0], isolate);
+
+    internal::stop_v8();
+  }
+
+  #[test]
+  fn delete_isolate() {
+    internal::start_v8(SERVER_PATH);
+
+    let isolate = internal::create_isolate();
+    assert_eq!(internal::get_isolates().len(), 1);
+
+    internal::delete_isolate(&isolate);
+    assert_eq!(internal::get_isolates().len(), 0);
 
     internal::stop_v8();
   }
