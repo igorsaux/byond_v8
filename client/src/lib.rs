@@ -1,4 +1,4 @@
-use auxtools::{hook, Value as ByondValue};
+use auxtools::{hook, runtime, Value as ByondValue};
 use byond_message::ByondMessage;
 use shared::SERVER_NAME;
 
@@ -20,9 +20,21 @@ fn stop_v8() {
 }
 
 #[hook("/proc/_execute_code")]
-fn execute_js(code: Value, isolate: Value) {
-  let code = code.to_string().unwrap();
-  let isolate = isolate.to_string().unwrap();
+fn execute_js(code: ByondValue, isolate: ByondValue) {
+  let code = match code.to_string() {
+    Ok(code) => code,
+    Err(_) => {
+      return Err(runtime!("`code` must be a string."))
+    }
+  };
+
+  let isolate = match isolate.to_string() {
+    Ok(isolate) => isolate,
+    Err(_) => {
+      return Err(runtime!("`isolate` must be a string."))
+    }
+  };
+
   // 🤔
   let code = code.trim_matches('"');
   let isolate = isolate.trim_matches('"');
@@ -45,8 +57,12 @@ fn create_isolate() {
 }
 
 #[hook("/proc/_delete_isolate")]
-fn delete_isolate(isolate: Value) {
-  let isolate = isolate.to_string().unwrap();
+fn delete_isolate(isolate: ByondValue) {
+  let isolate = match isolate.to_string() {
+    Ok(isolate) => isolate,
+    Err(_) => return Err(runtime!("`isolate` must be a string."))
+  };
+
   let isolate = isolate.trim_matches('"');
 
   internal::delete_isolate(isolate);
